@@ -253,17 +253,17 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
                     final JFBYNonDominationLevel<T> level = nonDominationLevels.get(i);
                     memberAdditionResult = level.addMembers(addends);
                     nonDominationLevels.set(i, memberAdditionResult.getModifiedLevel());
-
-                    if (!memberAdditionResult.getEvictedMembers().isEmpty()) {
-                        acquireLock(i + 1);
-                    }
-                    addends = memberAdditionResult.getEvictedMembers(); //следующей итерацией будем добавлять выселенных членов, лок взяли
-
                 } finally {
                     levelLocks.get(i).unlock();
                 }
 
                 i++;
+//modified
+                // отпускаю лок одного уровня до взятия следующего
+                if (!memberAdditionResult.getEvictedMembers().isEmpty()) {
+                    acquireLock(i);
+                }
+                addends = memberAdditionResult.getEvictedMembers(); //следующей итерацией будем добавлять выселенных членов, лок взяли
             }
             if (!addends.isEmpty()) { // если выселили раньше кого-то совсем, то так же добавляем новый уровень
                 levelLocks.add(new ReentrantLock());
