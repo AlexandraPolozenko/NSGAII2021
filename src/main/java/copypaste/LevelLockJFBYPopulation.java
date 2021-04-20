@@ -1,11 +1,10 @@
 package copypaste;
 
+import copypaste.jfby.JFBYNonDominationLevel;
+import copypaste.sorter.IncrementalJFB;
+import copypaste.sorter.JFB2014;
+import javafx.util.Pair;
 import ru.ifmo.nds.IIndividual;
-import ru.ifmo.nds.INonDominationLevel;
-import ru.ifmo.nds.PopulationSnapshot;
-import ru.ifmo.nds.dcns.jfby.JFBYNonDominationLevel;
-import ru.ifmo.nds.dcns.sorter.IncrementalJFB;
-import ru.ifmo.nds.dcns.sorter.JFB2014;
 import ru.ifmo.nds.impl.FitnessAndCdIndividual;
 import ru.ifmo.nds.util.SortedObjectives;
 import ru.ifmo.nds.util.median.QuickSelect;
@@ -15,6 +14,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +39,8 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
 
     private final long expectedPopSize;
     private final double deletionThreshold;
+
+    private final Map<Integer, Pair<Long, Integer>> levelsTs;
 
     @SuppressWarnings("WeakerAccess")
     public LevelLockJFBYPopulation() {
@@ -65,6 +67,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
         this.nonDominationLevels = nonDominationLevels;
         this.expectedPopSize = expectedPopSize;
         this.deletionThreshold = deletionThreshold;
+        this.levelsTs = new HashMap<>();
 
         for (INonDominationLevel<T> level : nonDominationLevels) {
             levelLocks.add(new ReentrantLock());
@@ -211,6 +214,8 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
 
     @Override
     public int addIndividual(@Nonnull IIndividual<T> addend) {
+        final long ts = System.nanoTime();
+
         if (presentIndividuals.putIfAbsent(addend, true) != null) { //если элемент уже был, то просто вернем его ранк
             return determineRank(addend); //нашли последний уровень, где наш объект недоминирует
         }
@@ -252,6 +257,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
                 try {//добавляем членов на уровень
                     final JFBYNonDominationLevel<T> level = nonDominationLevels.get(i);
                     memberAdditionResult = level.addMembers(addends);
+
                     nonDominationLevels.set(i, memberAdditionResult.getModifiedLevel());
 
                     if (!memberAdditionResult.getEvictedMembers().isEmpty()) {
@@ -275,6 +281,11 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
 
         size.incrementAndGet(); //количество элементов?
         massRemoveWorst();
+
+        final long spent = System.nanoTime() - ts;
+
+        levelsTs.putIfAbsent(rank, new Pair(0l, 0));
+        levelsTs.put(rank, new Pair(levelsTs.get(rank).getKey() + spent, levelsTs.get(rank).getValue() + 1));
 
         return rank;
     }
@@ -318,5 +329,10 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
             copy.getSnapshot().getLevels().add(level.copy());
         }
         return copy;
+    }
+
+    @Override
+    public Map<Integer, Pair<Long, Integer>> getLevelsTs() {
+        return levelsTs;
     }
 }

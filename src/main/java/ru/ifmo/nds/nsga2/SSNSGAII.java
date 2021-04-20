@@ -59,8 +59,15 @@ public class SSNSGAII extends AbstractAlgorithm implements EpsilonBoxEvolutionar
     @Override
     public void iterate() {
         try {
+//            final long ts = System.currentTimeMillis();
+
             final Solution addend = generateOffspring();
             population.addIndividual(new FitnessAndCdIndividual<>(addend.getObjectives(), addend));
+
+//            final long spent = System.currentTimeMillis() - ts;
+//            if (spent > 4) {
+//                System.out.println(spent);
+//            }
         } catch (ArrayIndexOutOfBoundsException e) {
             for (StackTraceElement stackTraceElement : e.getStackTrace()) {
                 if (stackTraceElement.getClassName().contains(MersenneTwister.class.getSimpleName())) {

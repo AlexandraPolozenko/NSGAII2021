@@ -1,8 +1,7 @@
 package copypaste;
 
+import javafx.util.Pair;
 import ru.ifmo.nds.IIndividual;
-import ru.ifmo.nds.INonDominationLevel;
-import ru.ifmo.nds.PopulationSnapshot;
 import ru.ifmo.nds.impl.RankedIndividual;
 import ru.ifmo.nds.util.AscLexSortComparator;
 import ru.ifmo.nds.util.RankedPopulation;
@@ -12,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -132,4 +132,6 @@ public interface IManagedPopulation<T> extends Cloneable {
         //noinspection unchecked
         return new RankedPopulation<>(pop, sortedRanks);
     }
+
+    Map<Integer, Pair<Long, Integer>> getLevelsTs();
 }
