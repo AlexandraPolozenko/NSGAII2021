@@ -67,7 +67,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
         this.nonDominationLevels = nonDominationLevels;
         this.expectedPopSize = expectedPopSize;
         this.deletionThreshold = deletionThreshold;
-        this.levelsTs = new HashMap<>();
+        this.levelsTs = new ConcurrentHashMap<>();
 
         for (INonDominationLevel<T> level : nonDominationLevels) {
             levelLocks.add(new ReentrantLock());
@@ -116,7 +116,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
 
                     try {
                         final JFBYNonDominationLevel<T> lastLevel = nonDominationLevels.get(lastLevelIndex);
-                        if (lastLevel.getMembers().size() <= remaining) { //если он меньше нужного, удоляем совсем
+                        if (lastLevel.getMembers().size() <= remaining) { //если он меньше нужного, удаляем совсем
                             levelLocks.remove(lastLevelIndex);
                             nonDominationLevels.remove(lastLevelIndex);
                             if (lastLevel.getMembers().isEmpty()) {
@@ -228,6 +228,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
                 if (rank >= nonDominationLevels.size() && lock == addLevelLock) {
                     break;
                 } else if (!nonDominationLevels.get(rank).dominatedByAnyPointOfThisLayer(addend)) {
+                    lock.unlock();
                     break;
                 } else {
                     lock.unlock();
@@ -247,45 +248,57 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
             );
             levelLocks.add(new ReentrantLock());
             nonDominationLevels.add(level);
+//            addLevelLock.tryLock();
             addLevelLock.unlock();
         } else {
             List<IIndividual<T>> addends = Collections.singletonList(addend);
             int i = rank;
             while (!addends.isEmpty() && i < nonDominationLevels.size()) {
                 final INonDominationLevel.MemberAdditionResult<T, JFBYNonDominationLevel<T>> memberAdditionResult;
-                //assertion: we have locked levelLocks.get(i)
-                try {//добавляем членов на уровень
-                    final JFBYNonDominationLevel<T> level = nonDominationLevels.get(i);
-                    memberAdditionResult = level.addMembers(addends);
+                //добавляем членов на уровень
+                final JFBYNonDominationLevel<T> level = nonDominationLevels.get(i);
+                memberAdditionResult = level.addMembers(addends);
 
-                    nonDominationLevels.set(i, memberAdditionResult.getModifiedLevel());
+//                try {  !!
+//                    removeLevelLock.lock(); !!
+//                    if (i < nonDominationLevels.size()) { !!
+                        nonDominationLevels.set(i, memberAdditionResult.getModifiedLevel());
+//                    } else { !!
+//                        try { !!
+//                            addLevelLock.lock(); !!
+//                            levelLocks.add(new ReentrantLock()); !!
+//                            nonDominationLevels.add(memberAdditionResult.getModifiedLevel()); !!
+//                        } finally { !!
+//                            addLevelLock.unlock(); !!
+//                        } !!
+//                    } !!
+//                } finally { !!
+//                    removeLevelLock.unlock(); !!
+//                } !!
 
-                    if (!memberAdditionResult.getEvictedMembers().isEmpty()) {
-                        acquireLock(i + 1);
-                    }
-                    addends = memberAdditionResult.getEvictedMembers(); //следующей итерацией будем добавлять выселенных членов, лок взяли
-
-                } finally {
-                    levelLocks.get(i).unlock();
-                }
-
+                addends = memberAdditionResult.getEvictedMembers();
                 i++;
             }
             if (!addends.isEmpty()) { // если выселили раньше кого-то совсем, то так же добавляем новый уровень
-                levelLocks.add(new ReentrantLock());
-                final JFBYNonDominationLevel<T> level = new JFBYNonDominationLevel<>(sorter, addends); //New level - full CD calc
-                nonDominationLevels.add(level);
-                addLevelLock.unlock();
+                try {
+                    addLevelLock.lock();
+                    levelLocks.add(new ReentrantLock());
+                    final JFBYNonDominationLevel<T> level = new JFBYNonDominationLevel<>(sorter, addends); //New level - full CD calc
+                    nonDominationLevels.add(level);
+                } finally {
+                    addLevelLock.unlock();
+                }
             }
         }
 
+
+            final long spent = System.nanoTime() - ts;
+
+            levelsTs.putIfAbsent(rank, new Pair(0l, 0));
+            levelsTs.put(rank, new Pair(levelsTs.get(rank).getKey() + spent, levelsTs.get(rank).getValue() + 1));
+
         size.incrementAndGet(); //количество элементов?
-        massRemoveWorst();
-
-        final long spent = System.nanoTime() - ts;
-
-        levelsTs.putIfAbsent(rank, new Pair(0l, 0));
-        levelsTs.put(rank, new Pair(levelsTs.get(rank).getKey() + spent, levelsTs.get(rank).getValue() + 1));
+//        massRemoveWorst(); !!
 
         return rank;
     }

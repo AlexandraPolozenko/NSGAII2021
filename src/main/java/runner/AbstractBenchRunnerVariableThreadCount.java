@@ -87,26 +87,6 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
         return ste[stackDepth + 2].getMethodName();
     }
 
-//
-//    public void jfbySerial() {
-//        //System.out.println("Starting " + getMethodName(0));
-//
-//        final int popSize = getPopSize();
-//        final DTLZ problem = getProblem();
-//
-//        for (int i = 0; i < getRunCount(); ++i) {
-//            final IManagedPopulation<Solution> pop = new JFBYPopulation<>(popSize);
-//            final SSNSGAII nsga = NSGAIIMoeaRunner.newSSNSGAII(popSize, problem, pop);
-//            nsga.step();
-//
-//            final long startTs = System.nanoTime();
-//            for (long j = 0; j < getNumberOfIncrementalInsertions(1); ++j) {
-//                nsga.step();
-//            }
-//            printHV(pop, 0, i, System.nanoTime() - startTs);
-//        }
-//    }
-
     private void concurrentTestCommon(final int threadsCount,
                                       @Nonnull final Supplier<IManagedPopulation<Solution>> popSupplier) throws InterruptedException {
         //System.out.println("Starting " + getMethodName(1));
@@ -146,7 +126,7 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
 
                 printHV(pop, 1, i, System.nanoTime() - startTs);
 
-                average.add(pop.getLevelsTs().get(1).getKey() / (pop.getLevelsTs().get(1).getValue()));
+                average.add(pop.getLevelsTs().get(0).getKey() / pop.getLevelsTs().get(0).getValue());
             }
         } finally {
             es.shutdownNow();
@@ -158,12 +138,4 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
     public void levelLockJfby(final int threadsCount) throws InterruptedException {
         concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulation<>(getPopSize()));
     }
-
-//    public void cjfbyAlt(final int threadsCount) throws InterruptedException {
-//        concurrentTestCommon(threadsCount, () -> new CJFBYPopulation<>(getPopSize(), true));
-//    }
-//
-//    public void ts(final int threadsCount) throws InterruptedException {
-//        concurrentTestCommon(threadsCount, () -> new TotalSyncJFBYPopulation<>(getPopSize()));
-//    }
 }
