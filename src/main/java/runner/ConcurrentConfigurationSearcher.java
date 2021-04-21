@@ -33,7 +33,7 @@ public class ConcurrentConfigurationSearcher {
             final long start = System.currentTimeMillis();
             d3Runner.levelLockJfby(i);
             final long duration = System.currentTimeMillis() - start;
-            System.out.println(duration);
+//            System.out.println(duration);
             if (duration > prevDuration * 2)
                 break;
             prevDuration = duration;

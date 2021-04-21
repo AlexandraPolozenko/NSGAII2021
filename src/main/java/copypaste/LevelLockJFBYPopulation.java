@@ -1,5 +1,6 @@
 package copypaste;
 
+import javafx.util.Pair;
 import ru.ifmo.nds.IIndividual;
 import ru.ifmo.nds.INonDominationLevel;
 import ru.ifmo.nds.PopulationSnapshot;
@@ -40,6 +41,8 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
     private final long expectedPopSize;
     private final double deletionThreshold;
 
+    private final ConcurrentHashMap<Integer, Pair<Long, Integer>> levelsTs;
+
     @SuppressWarnings("WeakerAccess")
     public LevelLockJFBYPopulation() {
         this(Long.MAX_VALUE);
@@ -65,6 +68,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
         this.nonDominationLevels = nonDominationLevels;
         this.expectedPopSize = expectedPopSize;
         this.deletionThreshold = deletionThreshold;
+        this.levelsTs = new ConcurrentHashMap<>();
 
         for (INonDominationLevel<T> level : nonDominationLevels) {
             levelLocks.add(new ReentrantLock());
@@ -211,6 +215,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
 
     @Override
     public int addIndividual(@Nonnull IIndividual<T> addend) {
+        final long ts = System.nanoTime();
         if (presentIndividuals.putIfAbsent(addend, true) != null) { //если элемент уже был, то просто вернем его ранк
             return determineRank(addend); //нашли последний уровень, где наш объект недоминирует
         }
@@ -273,6 +278,11 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
             }
         }
 
+        final long spent = System.nanoTime() - ts;
+
+        levelsTs.putIfAbsent(rank, new Pair(0l, 0));
+        levelsTs.put(rank, new Pair(levelsTs.get(rank).getKey() + spent, levelsTs.get(rank).getValue() + 1));
+
         size.incrementAndGet(); //количество элементов?
         massRemoveWorst();
 
@@ -318,5 +328,10 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
             copy.getSnapshot().getLevels().add(level.copy());
         }
         return copy;
+    }
+
+    @Override
+    public Map<Integer, Pair<Long, Integer>> getLevelsTs() {
+        return levelsTs;
     }
 }
