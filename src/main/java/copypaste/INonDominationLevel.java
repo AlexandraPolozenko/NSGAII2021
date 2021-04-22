@@ -3,6 +3,7 @@ package copypaste;
 import ru.ifmo.nds.IIndividual;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.List;
 
 public interface INonDominationLevel<T> {
@@ -36,7 +37,7 @@ public interface INonDominationLevel<T> {
      * @param addends New points
      * @return A set of evicted points that should be moved to the next level
      */
-    INonDominationLevel.MemberAdditionResult addMembers(@Nonnull List<IIndividual<T>> addends);
+    ArrayList<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends);
 
     /**
      * @return true if {@code point} is dominated by any member of this layer

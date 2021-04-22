@@ -28,12 +28,16 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
     private final JFB2014 sorter;
 
     @Nonnull
-    private final List<IIndividual<T>> membersLeft;
+    private volatile List<IIndividual<T>> membersLeft;
     @Nonnull
-    private final List<IIndividual<T>> membersRight;
+    private volatile List<IIndividual<T>> membersRight;
+    @Nonnull
+    private volatile List<IIndividual<T>> newMembers;
+    @Nonnull
+    private volatile List<IIndividual<T>> oldMembers;
 
     @Nonnull
-    private final SortedObjectives<IIndividual<T>, T> sortedObjectives;
+    private volatile SortedObjectives<IIndividual<T>, T> sortedObjectives;
 
     private final Lock leftMembersLock = new ReentrantLock();
     private final Lock rightMembersLock = new ReentrantLock();
@@ -54,6 +58,8 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
             final List<IIndividual<T>> mems = sortedObjectives.getLexSortedPop();
             this.membersLeft = new ArrayList<>();
             this.membersRight = new ArrayList<>();
+            this.newMembers = new ArrayList<>();
+            this.oldMembers = new ArrayList<>();
             for (int i = 0; i < mems.size() / 2; i++) {
                 membersLeft.add(mems.get(i));
             }
@@ -75,6 +81,8 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
         final List<IIndividual<T>> mems = Collections.unmodifiableList(members);
         this.membersLeft = new ArrayList<>();
         this.membersRight = new ArrayList<>();
+        this.newMembers = new ArrayList<>();
+        this.oldMembers = new ArrayList<>();
         for (int i = 0; i < mems.size() / 2; i++) {
             membersLeft.add(mems.get(i));
         }
@@ -100,7 +108,7 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
     }
 
     @Override
-    public MemberAdditionResult<T, JFBYNonDominationLevel<T>> addMembers(@Nonnull List<IIndividual<T>> addends) {
+    public ArrayList<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends) {
         final ArrayList<IIndividual<T>> nextLevel = new ArrayList<>();
 
 //left
@@ -130,6 +138,19 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
                     nextLevel.add(rpRight.getPop()[i]);
                 }
             }
+
+            final int[] ranksNew = new int[newMembers.size()];
+            final RankedPopulation<IIndividual<T>> rpNew = sorter.addRankedMembers(newMembers, ranksNew, addends, 0);
+
+            for (int i = 0; i < rpNew.getPop().length; ++i) {
+                if (rpNew.getRanks()[i] != 0) {
+                    nextLevel.add(rpNew.getPop()[i]);
+                }
+            }
+
+            nextLevel.removeAll(oldMembers);
+            oldMembers = new ArrayList<>(nextLevel);
+            newMembers = new ArrayList<>(addends);
         } finally {
             rightMembersLock.unlock();
         }
@@ -142,14 +163,33 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
                 nextLevel,
                 (i, d) -> new FitnessAndCdIndividual<>(i.getObjectives(), d, i.getPayload())
             );
-        } finally {
+
+            final List<IIndividual<T>> mems = nso.getLexSortedPop();
+            final List<IIndividual<T>> memsL = new ArrayList<>();
+            final List<IIndividual<T>> memsR  = new ArrayList<>();
+            for (int i = 0; i < mems.size() / 2; i++) {
+                memsL.add(mems.get(i));
+            }
+
+            for (int i = mems.size() / 2; i < mems.size(); i++) {
+                memsR.add(mems.get(i));
+            }
+
+            this.sortedObjectives = nso;
+            this.membersLeft = memsL;
+            this.membersRight = memsR;
+            this.newMembers = new ArrayList<>();
+            this.oldMembers = new ArrayList<>();
+
+        }
+        catch (ArrayIndexOutOfBoundsException e) {
+            e.printStackTrace();
+        }
+        finally {
             levelLock.unlock();
         }
 
-        return new MemberAdditionResult<>(
-            nextLevel,
-            new JFBYNonDominationLevel<>(sorter, nso.getLexSortedPop(), nso)
-        );
+        return nextLevel;
     }
 
     @Override

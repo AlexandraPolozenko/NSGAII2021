@@ -256,13 +256,12 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
             while (!addends.isEmpty() && i < nonDominationLevels.size()) {
                 final INonDominationLevel.MemberAdditionResult<T, JFBYNonDominationLevel<T>> memberAdditionResult;
                 //добавляем членов на уровень
-                final JFBYNonDominationLevel<T> level = nonDominationLevels.get(i);
-                memberAdditionResult = level.addMembers(addends);
+                addends = nonDominationLevels.get(i).addMembers(addends);
 
 //                try {  !!
 //                    removeLevelLock.lock(); !!
 //                    if (i < nonDominationLevels.size()) { !!
-                        nonDominationLevels.set(i, memberAdditionResult.getModifiedLevel());
+//                        nonDominationLevels.set(i, memberAdditionResult.getModifiedLevel());
 //                    } else { !!
 //                        try { !!
 //                            addLevelLock.lock(); !!
@@ -276,7 +275,7 @@ public class LevelLockJFBYPopulation<T> implements IManagedPopulation<T> {
 //                    removeLevelLock.unlock(); !!
 //                } !!
 
-                addends = memberAdditionResult.getEvictedMembers();
+//                addends = memberAdditionResult.getEvictedMembers();
                 i++;
             }
             if (!addends.isEmpty()) { // если выселили раньше кого-то совсем, то так же добавляем новый уровень

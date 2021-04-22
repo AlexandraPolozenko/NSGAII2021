@@ -126,13 +126,13 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
 
                 printHV(pop, 1, i, System.nanoTime() - startTs);
 
-                average.add(pop.getLevelsTs().get(0).getKey() / pop.getLevelsTs().get(0).getValue());
+//                average.add(pop.getLevelsTs().get(0).getKey() / pop.getLevelsTs().get(0).getValue());
             }
         } finally {
             es.shutdownNow();
         }
 
-        System.out.println(average.stream().reduce(0l, (a, b) -> a += b) / average.size());
+//        System.out.println(average.stream().reduce(0l, (a, b) -> a += b) / average.size());
     }
 
     public void levelLockJfby(final int threadsCount) throws InterruptedException {
