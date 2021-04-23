@@ -37,7 +37,7 @@ public interface INonDominationLevel<T> {
      * @param addends New points
      * @return A set of evicted points that should be moved to the next level
      */
-    ArrayList<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends);
+    List<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends);
 
     /**
      * @return true if {@code point} is dominated by any member of this layer

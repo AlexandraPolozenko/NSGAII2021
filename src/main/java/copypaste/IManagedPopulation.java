@@ -68,13 +68,13 @@ public interface IManagedPopulation<T> extends Cloneable {
         int prevLevelsSizeSum = 0;
         int rank = 0;
         for (INonDominationLevel<T> level : popSnap.getLevels()) {
-            final int levelSize = level.getMembers().size();
-            while (next != null && next - prevLevelsSizeSum < levelSize) {
+//            final int levelSize = level.getMembers().size();
+            while (next != null && next - prevLevelsSizeSum < level.getMembers().size()) {
                 final IIndividual<T> ind = level.getMembers().get(next - prevLevelsSizeSum);
                 res.add(new RankedIndividual<>(ind.getObjectives(), ind.getCrowdingDistance(), rank, ind.getPayload()));
                 next = getNext(it);
             }
-            prevLevelsSizeSum += levelSize;
+            prevLevelsSizeSum += level.getMembers().size();
             rank++;
         }
 

@@ -1,12 +1,11 @@
 package copypaste.jfby;
 
 import copypaste.INonDominationLevel;
+import copypaste.SortedObjectives;
 import copypaste.sorter.JFB2014;
-import org.moeaframework.problem.misc.Lis;
 import ru.ifmo.nds.IIndividual;
 import ru.ifmo.nds.impl.FitnessAndCdIndividual;
 import ru.ifmo.nds.util.RankedPopulation;
-import ru.ifmo.nds.util.SortedObjectives;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
@@ -108,30 +107,31 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
     }
 
     @Override
-    public ArrayList<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends) {
-        final ArrayList<IIndividual<T>> nextLevel = new ArrayList<>();
+    public List<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends) {
+        final List<IIndividual<T>> nextLevel;
 
 //left
         try {
             leftMembersLock.lock();
-            final int[] ranksLeft = new int[membersLeft.size()];
-            final RankedPopulation<IIndividual<T>> rpLeft = sorter.addRankedMembers(membersLeft, ranksLeft, addends, 0);
+            nextLevel = Collections.synchronizedList(new ArrayList<>());
+
+            final RankedPopulation<IIndividual<T>> rpLeft = sorter.addRankedMembers(membersLeft, new int[membersLeft.size()], addends, 0);
 
             for (int i = 0; i < rpLeft.getPop().length; ++i) {
                 if (rpLeft.getRanks()[i] != 0) {
                     nextLevel.add(rpLeft.getPop()[i]);
                 }
             }
-        } finally {
-            leftMembersLock.unlock();
-        }
+//        } finally {
+//            leftMembersLock.unlock();
+//        }
+////
+//
+////right
+//        try {
+//            rightMembersLock.lock();
 
-
-//right
-        try {
-            rightMembersLock.lock();
-            final int[] ranksRight = new int[membersRight.size()];
-            final RankedPopulation<IIndividual<T>> rpRight = sorter.addRankedMembers(membersRight, ranksRight, addends, 0);
+            final RankedPopulation<IIndividual<T>> rpRight = sorter.addRankedMembers(membersRight, new int[membersRight.size()], addends, 0);
 
             for (int i = 0; i < rpRight.getPop().length; ++i) {
                 if (rpRight.getRanks()[i] != 0) {
@@ -139,8 +139,7 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
                 }
             }
 
-            final int[] ranksNew = new int[newMembers.size()];
-            final RankedPopulation<IIndividual<T>> rpNew = sorter.addRankedMembers(newMembers, ranksNew, addends, 0);
+            final RankedPopulation<IIndividual<T>> rpNew = sorter.addRankedMembers(newMembers, new int[newMembers.size()], addends, 0);
 
             for (int i = 0; i < rpNew.getPop().length; ++i) {
                 if (rpNew.getRanks()[i] != 0) {
@@ -152,13 +151,13 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
             oldMembers = new ArrayList<>(nextLevel);
             newMembers = new ArrayList<>(addends);
         } finally {
-            rightMembersLock.unlock();
+//            rightMembersLock.unlock();
+            leftMembersLock.unlock();
         }
 
-        final SortedObjectives<IIndividual<T>, T> nso;
         try {
             levelLock.lock();
-             nso = sortedObjectives.update(
+            final SortedObjectives<IIndividual<T>, T> nso = sortedObjectives.update(
                 addends,
                 nextLevel,
                 (i, d) -> new FitnessAndCdIndividual<>(i.getObjectives(), d, i.getPayload())
@@ -166,7 +165,7 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
 
             final List<IIndividual<T>> mems = nso.getLexSortedPop();
             final List<IIndividual<T>> memsL = new ArrayList<>();
-            final List<IIndividual<T>> memsR  = new ArrayList<>();
+            final List<IIndividual<T>> memsR = new ArrayList<>();
             for (int i = 0; i < mems.size() / 2; i++) {
                 memsL.add(mems.get(i));
             }
@@ -181,11 +180,11 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
             this.newMembers = new ArrayList<>();
             this.oldMembers = new ArrayList<>();
 
-        }
-        catch (ArrayIndexOutOfBoundsException e) {
-            e.printStackTrace();
-        }
-        finally {
+//        }
+//        catch (ArrayIndexOutOfBoundsException e) {
+//            e.printStackTrace();
+//        }
+        } finally {
             levelLock.unlock();
         }
 

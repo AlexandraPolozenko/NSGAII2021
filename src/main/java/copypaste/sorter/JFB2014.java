@@ -192,8 +192,13 @@ public class JFB2014 { //todo: extract interface
         for (int i = 0; i < newPop.length; ++i) {
             if (iAdd == addends.size() ||
                     iPop < pop.size() && lexCompare(pop.get(iPop).getObjectives(), addends.get(iAdd).getObjectives(), dim) <= 0) {
-                newPop[i] = pop.get(iPop);
-                newRanks[i] = ranks[iPop++];
+
+                try {
+                    newPop[i] = pop.get(iPop);
+                    newRanks[i] = ranks[iPop++];
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    e.printStackTrace();
+                }
 
                 if (dominates(ultimateAddend, newPop[i].getObjectives(), dim) < 0)
                     hSet.add(i);

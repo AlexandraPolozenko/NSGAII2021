@@ -6,7 +6,6 @@ import copypaste.sorter.JFB2014;
 import javafx.util.Pair;
 import ru.ifmo.nds.IIndividual;
 import ru.ifmo.nds.impl.FitnessAndCdIndividual;
-import ru.ifmo.nds.util.SortedObjectives;
 import ru.ifmo.nds.util.median.QuickSelect;
 
 import javax.annotation.Nonnull;
