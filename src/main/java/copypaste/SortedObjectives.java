@@ -207,7 +207,7 @@ public class SortedObjectives<T extends IIndividual<P>, P> {
     }
 
     private List<T> calculateCD(@Nonnull final BiFunction<T, Double, T> cdUpdater,
-                                final int targetSize, //125
+                                final int targetSize,
                                 @Nonnull final List<T> newLexSortedPop,
                                 @Nonnull final List<double[]> newCoordSorted,
                                 @Nonnull final List<int[]> newCorrespIndex) {
@@ -221,13 +221,7 @@ public class SortedObjectives<T extends IIndividual<P>, P> {
 
             final double inverseDelta = 1 / (coord[coord.length - 1] - coord[0]);
             for (int j = 1; j < targetSize - 1; j++) {
-                try {
-                    cd[index[j]] += (coord[j + 1] - coord[j - 1]) * inverseDelta;
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    Arrays.stream(index).forEach(System.out::println);
-                    System.out.println("!!!!!!!!!!!!!!");
-                    e.printStackTrace();
-                }
+                cd[index[j]] += (coord[j + 1] - coord[j - 1]) * inverseDelta;
             }
         }
 

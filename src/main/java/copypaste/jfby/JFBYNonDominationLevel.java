@@ -1,5 +1,6 @@
 package copypaste.jfby;
 
+import apple.laf.JRSUIUtils;
 import copypaste.INonDominationLevel;
 import copypaste.SortedObjectives;
 import copypaste.sorter.JFB2014;
@@ -13,7 +14,10 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -108,12 +112,14 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
 
     @Override
     public List<IIndividual<T>> addMembers(@Nonnull List<IIndividual<T>> addends) {
-        final List<IIndividual<T>> nextLevel;
+        final Set<IIndividual<T>> nextLevel;
 
 //left
         try {
             leftMembersLock.lock();
-            nextLevel = Collections.synchronizedList(new ArrayList<>());
+            nextLevel = Collections.synchronizedSortedSet(new TreeSet<>(
+                Comparator.comparingDouble(i -> i.getObjectives()[0])
+            ));
 
             final RankedPopulation<IIndividual<T>> rpLeft = sorter.addRankedMembers(membersLeft, new int[membersLeft.size()], addends, 0);
 
@@ -122,14 +128,13 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
                     nextLevel.add(rpLeft.getPop()[i]);
                 }
             }
-//        } finally {
-//            leftMembersLock.unlock();
-//        }
-////
-//
-////right
-//        try {
-//            rightMembersLock.lock();
+        } finally {
+            leftMembersLock.unlock();
+        }
+
+//right
+        try {
+            rightMembersLock.lock();
 
             final RankedPopulation<IIndividual<T>> rpRight = sorter.addRankedMembers(membersRight, new int[membersRight.size()], addends, 0);
 
@@ -151,15 +156,16 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
             oldMembers = new ArrayList<>(nextLevel);
             newMembers = new ArrayList<>(addends);
         } finally {
-//            rightMembersLock.unlock();
-            leftMembersLock.unlock();
+            rightMembersLock.unlock();
         }
 
         try {
             levelLock.lock();
             final SortedObjectives<IIndividual<T>, T> nso = sortedObjectives.update(
                 addends,
-                nextLevel,
+                nextLevel.stream()
+                    .filter(el -> sortedObjectives.getLexSortedPop().contains(el))
+                    .collect(Collectors.toList()),
                 (i, d) -> new FitnessAndCdIndividual<>(i.getObjectives(), d, i.getPayload())
             );
 
@@ -177,18 +183,12 @@ public class JFBYNonDominationLevel<T> implements INonDominationLevel<T> {
             this.sortedObjectives = nso;
             this.membersLeft = memsL;
             this.membersRight = memsR;
-            this.newMembers = new ArrayList<>();
-            this.oldMembers = new ArrayList<>();
 
-//        }
-//        catch (ArrayIndexOutOfBoundsException e) {
-//            e.printStackTrace();
-//        }
         } finally {
             levelLock.unlock();
         }
 
-        return nextLevel;
+        return new ArrayList<>(nextLevel);
     }
 
     @Override

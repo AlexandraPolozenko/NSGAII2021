@@ -167,9 +167,9 @@ public class JFB2014 { //todo: extract interface
      * @return Updated population
      */
     public <T> RankedPopulation<IIndividual<T>> addRankedMembers(List<IIndividual<T>> pop,
-                                                          int[] ranks,
-                                                          List<IIndividual<T>> addends,
-                                                          @SuppressWarnings("SameParameterValue") int rankHint) { //todo: UT
+                                                                 int[] ranks,
+                                                                 List<IIndividual<T>> addends,
+                                                                 @SuppressWarnings("SameParameterValue") int rankHint) { //todo: UT
         final double[] ultimateAddend = new double[addends.get(0).getObjectives().length];
         for (int i = 0; i < ultimateAddend.length; ++i) {
             ultimateAddend[i] = Double.POSITIVE_INFINITY;
@@ -190,14 +190,14 @@ public class JFB2014 { //todo: extract interface
         final List<Integer> hSet = new ArrayList<>(pop.size());
         final List<Integer> lSet = new ArrayList<>(pop.size() + addends.size());
         for (int i = 0; i < newPop.length; ++i) {
-            if (iAdd == addends.size() ||
-                    iPop < pop.size() && lexCompare(pop.get(iPop).getObjectives(), addends.get(iAdd).getObjectives(), dim) <= 0) {
+            if (iAdd == addends.size() && iPop < pop.size() ||
+                iPop < pop.size() && lexCompare(pop.get(iPop).getObjectives(), addends.get(iAdd).getObjectives(), dim) <= 0) {
 
                 try {
                     newPop[i] = pop.get(iPop);
                     newRanks[i] = ranks[iPop++];
                 } catch (ArrayIndexOutOfBoundsException e) {
-                    e.printStackTrace();
+//                    e.printStackTrace();
                 }
 
                 if (dominates(ultimateAddend, newPop[i].getObjectives(), dim) < 0)
@@ -244,7 +244,7 @@ public class JFB2014 { //todo: extract interface
             return;
         } else if (workingSet.size() == 2) {
             if (dominates(pop[workingSet.get(0)].getObjectives(),
-                    pop[workingSet.get(1)].getObjectives(), k + 1) < 0)
+                pop[workingSet.get(1)].getObjectives(), k + 1) < 0)
                 ranks[workingSet.get(1)] = Math.max(ranks[workingSet.get(1)], ranks[workingSet.get(0)] + 1);
         } else if (k == 1) {
             sweepA(pop, ranks, workingSet);
@@ -320,7 +320,7 @@ public class JFB2014 { //todo: extract interface
             ranks[currIndex] = Math.max(r + 1, ranks[currIndex]);
 
             cleanupTSet(secondCoordSet.tailSet(new IndexedIndividual(currIndividual, currIndex), true),
-                    rankToIndex, ranks, ranks[currIndex]);
+                rankToIndex, ranks, ranks[currIndex]);
 
             rankToIndex.put(ranks[currIndex], currIndex);
             secondCoordSet.add(new IndexedIndividual(pop[currIndex].getObjectives(), currIndex));
@@ -359,7 +359,6 @@ public class JFB2014 { //todo: extract interface
      * @param lSet  Lower set (its ranks are already calculated). Must be sorted.
      * @param hSet  Higher set (its ranks are to be updated). Must be sorted.
      * @param level Recursion level (used for logging)
-     *
      * @return whether at least one individual has changed its rank
      */
     private boolean ndHelperB(IIndividual[] pop,
@@ -448,7 +447,6 @@ public class JFB2014 { //todo: extract interface
      * @param ranks ranks[i] is the rank of individual pop[i]
      * @param lSet  Lower set (its ranks are already calculated). Must be sorted.
      * @param hSet  Higher set (its ranks are to be updated). Must be sorted.
-     *
      * @return whether at least one individual has changed its rank
      */
     boolean sweepB(IIndividual[] pop,
