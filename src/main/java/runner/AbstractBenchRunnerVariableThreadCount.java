@@ -11,7 +11,9 @@ import ru.ifmo.nds.nsga2.NSGAIIMoeaRunner;
 import ru.ifmo.nds.nsga2.SSNSGAII;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -114,6 +116,7 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
         final DTLZ problem = getProblem();
 
         final ExecutorService es = Executors.newFixedThreadPool(threadsCount);
+        final List<Long> average = new ArrayList<>();
 
         try {
             for (int i = 0; i < getRunCount(); ++i) {
@@ -142,10 +145,13 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
                 latch.await();
 
                 printHV(pop, 1, i, System.nanoTime() - startTs);
+                average.add(pop.getLevelsTs().get(0).getKey() / (pop.getLevelsTs().get(0).getValue()));
             }
         } finally {
             es.shutdownNow();
         }
+
+        System.out.println(average.stream().reduce(0l, (a, b) -> a += b) / average.size());
     }
 
     public void levelLockJfby(final int threadsCount) throws InterruptedException {
