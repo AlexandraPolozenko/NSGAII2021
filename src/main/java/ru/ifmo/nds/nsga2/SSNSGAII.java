@@ -59,8 +59,15 @@ public class SSNSGAII extends AbstractAlgorithm implements EpsilonBoxEvolutionar
     @Override
     public void iterate() {
         try {
+//            final long ts = System.currentTimeMillis();
+
             final Solution addend = generateOffspring();
             population.addIndividual(new FitnessAndCdIndividual<>(addend.getObjectives(), addend));
+
+//            final long spent = System.currentTimeMillis() - ts;
+//            if (spent > 4) {
+//                System.out.println(spent);
+//            }
         } catch (ArrayIndexOutOfBoundsException e) {
             for (StackTraceElement stackTraceElement : e.getStackTrace()) {
                 if (stackTraceElement.getClassName().contains(MersenneTwister.class.getSimpleName())) {
@@ -74,28 +81,32 @@ public class SSNSGAII extends AbstractAlgorithm implements EpsilonBoxEvolutionar
     }
 
     private Solution generateOffspring() {
-        final int mutationCandidatesCount = variation.getArity() * 2;
-        final List<RankedIndividual<Solution>> mutationCandidates = population.getRandomSolutions(mutationCandidatesCount);
-        if (mutationCandidates.size() < mutationCandidatesCount) {
-            throw new RuntimeException("Failed to get enough mutation candidates: " + mutationCandidates);
-        }
+        try {
+            final int mutationCandidatesCount = variation.getArity() * 2;
+            final List<RankedIndividual<Solution>> mutationCandidates = population.getRandomSolutions(mutationCandidatesCount);
+//        if (mutationCandidates.size() < mutationCandidatesCount) {
+//            throw new RuntimeException("Failed to get enough mutation candidates: " + mutationCandidates);
+//        }
 
-        final RankedIndividual[] parents = new RankedIndividual[variation.getArity()];
-        //System.err.println(mutationCandidates);
-        for (int i = 0; i < mutationCandidates.size() - 1; i += 2) {
-            final RankedIndividual<Solution> ind1 = mutationCandidates.get(i);
-            final RankedIndividual<Solution> ind2 = mutationCandidates.get(i + 1);
-            parents[i / 2] = Selection.binaryTournament(ind1, ind2, comparator);
-        }
+            final RankedIndividual[] parents = new RankedIndividual[variation.getArity()];
+            //System.err.println(mutationCandidates);
+            for (int i = 0; i < mutationCandidates.size() - 1; i += 2) {
+                final RankedIndividual<Solution> ind1 = mutationCandidates.get(i);
+                final RankedIndividual<Solution> ind2 = mutationCandidates.get(i + 1);
+                parents[i / 2] = Selection.binaryTournament(ind1, ind2, comparator);
+            }
 
-        final Solution[] parentSolutions = new Solution[variation.getArity()];
-        for (int i = 0; i < variation.getArity(); ++i) {
-            parentSolutions[i] = (Solution) parents[i].getPayload();
-        }
+            final Solution[] parentSolutions = new Solution[variation.getArity()];
+            for (int i = 0; i < variation.getArity(); ++i) {
+                parentSolutions[i] = (Solution) parents[i].getPayload();
+            }
 
-        final Solution solution = variation.evolve(parentSolutions)[0];
-        evaluate(solution);
-        return solution;
+            final Solution solution = variation.evolve(parentSolutions)[0];
+            evaluate(solution);
+            return solution;
+        } catch (Exception e) {
+            return generateOffspring();
+        }
     }
 
     @Override
