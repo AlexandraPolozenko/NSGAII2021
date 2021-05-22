@@ -1,17 +1,19 @@
 package runner;
 
-import copypaste.IManagedPopulation;
-import copypaste.LevelLockJFBYPopulation;
+import nds.IManagedPopulation;
+import nds.LevelLockJFBYPopulationOptimizeRemove;
+import nds.LevelLockJFBYPopulationOriginal;
+import nds.LevelLockJFBYPopulationReleaseLockEarlier;
+import nds.shard1.LevelLockJFBYPopulationShardV1;
+import nds.shard2.LevelLockJFBYPopulationShardV2;
 import org.moeaframework.core.NondominatedPopulation;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.indicator.Hypervolume;
 import org.moeaframework.problem.DTLZ.DTLZ;
-import ru.ifmo.nds.IIndividual;
 import ru.ifmo.nds.nsga2.NSGAIIMoeaRunner;
 import ru.ifmo.nds.nsga2.SSNSGAII;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,11 +50,9 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
     public AbstractBenchRunnerVariableThreadCount() {
         final NondominatedPopulation trueParetoNP = new NondominatedPopulation();
         final DTLZ problem = getProblem();
-        double stupidSum = 0;
         for (int i = 0; i < getTrueParetoFrontSize(); ++i) {
             final Solution solution = problem.generate();
             trueParetoNP.add(solution);
-            stupidSum += Arrays.stream(solution.getObjectives()).sum();
         }
 
         hypervolume = new Hypervolume(problem, trueParetoNP);
@@ -60,55 +60,8 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
         System.setProperty(KEY_FAST_NONDOMINATED_SORTING, String.valueOf(true));
     }
 
-    private void printHV(IManagedPopulation<Solution> pop, int stackDepth, int runId, long runTime) {
-       // System.err.println("Printing HV...");
-        final NondominatedPopulation np = new NondominatedPopulation();
-        for (IIndividual<Solution> iIndividual : pop.getLevelsUnsafe().get(0).getMembers()) {
-            np.add(iIndividual.getPayload());
-        }
-        printHV(np, stackDepth + 1, runId, runTime);
-    }
-
-    private void printHV(final NondominatedPopulation np, int stackDepth, int runId, long runTime) {
-        final DTLZ problem = getProblem();
-        final String testMethod = getMethodName(stackDepth + 1);
-        double stupidSum = 0;
-        for (Solution solution : np) {
-            stupidSum += Arrays.stream(solution.getObjectives()).sum();
-        }
-//        System.out.printf("%d\t%s\t%s\t%d\t%d\t%f\t%f\t%f\t%d\n", runId, testMethod, problem.getName(), getDim(),
-//                getPopSize(), (double) runTime / 1e9, hypervolume.evaluate(np), stupidSum/np.size(), np.size()); //print milliseconds
-//        System.out.flush();
-    }
-
-    private String getMethodName(int stackDepth) {
-        final StackTraceElement[] ste = Thread.currentThread().getStackTrace();
-        return ste[stackDepth + 2].getMethodName();
-    }
-
-//
-//    public void jfbySerial() {
-//        //System.out.println("Starting " + getMethodName(0));
-//
-//        final int popSize = getPopSize();
-//        final DTLZ problem = getProblem();
-//
-//        for (int i = 0; i < getRunCount(); ++i) {
-//            final IManagedPopulation<Solution> pop = new JFBYPopulation<>(popSize);
-//            final SSNSGAII nsga = NSGAIIMoeaRunner.newSSNSGAII(popSize, problem, pop);
-//            nsga.step();
-//
-//            final long startTs = System.nanoTime();
-//            for (long j = 0; j < getNumberOfIncrementalInsertions(1); ++j) {
-//                nsga.step();
-//            }
-//            printHV(pop, 0, i, System.nanoTime() - startTs);
-//        }
-//    }
-
     private void concurrentTestCommon(final int threadsCount,
                                       @Nonnull final Supplier<IManagedPopulation<Solution>> popSupplier) throws InterruptedException {
-        //System.out.println("Starting " + getMethodName(1));
 
         final int popSize = getPopSize();
         final DTLZ problem = getProblem();
@@ -135,13 +88,10 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
                             throw th;
                         } finally {
                             latch.countDown();
-                            //System.out.println(latch.toString());
                         }
                     });
                 }
                 latch.await();
-
-                printHV(pop, 1, i, System.nanoTime() - startTs);
             }
         } finally {
             es.shutdownNow();
@@ -149,14 +99,22 @@ public abstract class AbstractBenchRunnerVariableThreadCount {
     }
 
     public void levelLockJfby(final int threadsCount) throws InterruptedException {
-        concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulation<>(getPopSize()));
+        concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulationOriginal<>(getPopSize()));
     }
 
-//    public void cjfbyAlt(final int threadsCount) throws InterruptedException {
-//        concurrentTestCommon(threadsCount, () -> new CJFBYPopulation<>(getPopSize(), true));
-//    }
-//
-//    public void ts(final int threadsCount) throws InterruptedException {
-//        concurrentTestCommon(threadsCount, () -> new TotalSyncJFBYPopulation<>(getPopSize()));
-//    }
+    public void levelLockJfbyReleaseLocksEarlier(final int threadsCount) throws InterruptedException {
+        concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulationReleaseLockEarlier<>(getPopSize()));
+    }
+
+    public void levelLockJfbyOptimizeRemove(final int threadsCount) throws InterruptedException {
+        concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulationOptimizeRemove<>(getPopSize()));
+    }
+
+    public void levelLockJfbyShardV1(final int threadsCount) throws InterruptedException {
+        concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulationShardV1<>(getPopSize()));
+    }
+
+    public void levelLockJfbyShardV2(final int threadsCount) throws InterruptedException {
+        concurrentTestCommon(threadsCount, () -> new LevelLockJFBYPopulationShardV2<>(getPopSize()));
+    }
 }

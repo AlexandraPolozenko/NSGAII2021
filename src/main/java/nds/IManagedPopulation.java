@@ -1,8 +1,6 @@
-package copypaste;
+package nds;
 
 import ru.ifmo.nds.IIndividual;
-import ru.ifmo.nds.INonDominationLevel;
-import ru.ifmo.nds.PopulationSnapshot;
 import ru.ifmo.nds.impl.RankedIndividual;
 import ru.ifmo.nds.util.AscLexSortComparator;
 import ru.ifmo.nds.util.RankedPopulation;

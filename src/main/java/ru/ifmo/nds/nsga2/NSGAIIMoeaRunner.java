@@ -1,6 +1,6 @@
 package ru.ifmo.nds.nsga2;
 
-import copypaste.IManagedPopulation;
+import nds.IManagedPopulation;
 import org.moeaframework.algorithm.NSGAII;
 import org.moeaframework.core.Initialization;
 import org.moeaframework.core.NondominatedSortingPopulation;

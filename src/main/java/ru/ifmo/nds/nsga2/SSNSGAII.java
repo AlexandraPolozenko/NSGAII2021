@@ -1,6 +1,6 @@
 package ru.ifmo.nds.nsga2;
 
-import copypaste.IManagedPopulation;
+import nds.IManagedPopulation;
 import org.apache.commons.math3.random.MersenneTwister;
 import org.moeaframework.algorithm.AbstractAlgorithm;
 import org.moeaframework.core.EpsilonBoxDominanceArchive;
